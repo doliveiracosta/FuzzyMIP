@@ -226,13 +226,14 @@ def render_cover() -> None:
         .reference-table td {
             border-bottom: 1px solid #e5e7eb;
             padding: 10px 11px;
-            text-align: left;
+            text-align: center;
             vertical-align: top;
         }
         .reference-table th {
             background: #f8fafc;
             color: #475569;
             font-weight: 600;
+            text-align: center;
         }
         .reference-table tr:last-child td {
             border-bottom: none;
@@ -265,13 +266,14 @@ def render_cover() -> None:
         .ranking-table td {
             border-bottom: 1px solid #e5e7eb;
             padding: 9px 9px;
-            text-align: left;
-            vertical-align: top;
+            text-align: center;
+            vertical-align: middle;
         }
         .ranking-table th {
             background: #f8fafc;
             color: #475569;
             font-weight: 600;
+            text-align: center;
         }
         .ranking-table tr:last-child td {
             border-bottom: none;
@@ -601,6 +603,15 @@ def priority_css_class(position: int, total: int) -> str:
     return "priority-monitoring"
 
 
+def priority_row_style(position: int, total: int) -> tuple[str, str]:
+    css_class = priority_css_class(position, total)
+    if css_class == "priority-critical":
+        return "#dc2626", "#ffffff"
+    if css_class == "priority-attention":
+        return "#fb923c", "#111827"
+    return "#fde047", "#111827"
+
+
 def render_ranking_table(ranking: pd.DataFrame) -> None:
     columns = [
         "Ranking",
@@ -622,11 +633,15 @@ def render_ranking_table(ranking: pd.DataFrame) -> None:
     total_rows = len(ranking)
     for position, (_, row) in enumerate(ranking.iterrows()):
         css_class = priority_css_class(position, total_rows)
+        background, text_color = priority_row_style(position, total_rows)
         cells = []
         for column in available_columns:
             value = row.get(column, "")
-            cell_class = "numeric" if column in numeric_columns else ""
-            cells.append(f'<td class="{cell_class}">{escape(str(value))}</td>')
+            align = "center"
+            cells.append(
+                f'<td style="background:{background}; color:{text_color}; text-align:{align};">'
+                f"{escape(str(value))}</td>"
+            )
         rows.append(f'<tr class="{css_class}">{"".join(cells)}</tr>')
     st.markdown(
         f"""
