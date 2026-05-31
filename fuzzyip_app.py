@@ -238,13 +238,16 @@ def render_cover() -> None:
             border-bottom: none;
         }
         .priority-critical td {
-            background: #fee2e2;
+            background: #dc2626;
+            color: #ffffff;
         }
         .priority-attention td {
-            background: #ffedd5;
+            background: #fb923c;
+            color: #111827;
         }
         .priority-monitoring td {
-            background: #fef9c3;
+            background: #fde047;
+            color: #111827;
         }
         .priority-result {
             font-weight: 700;
@@ -587,11 +590,13 @@ def matrix_reference() -> None:
     )
 
 
-def priority_css_class(result: object) -> str:
-    text = str(result).lower()
-    if "critico" in text or "prioritaria" in text:
+def priority_css_class(position: int, total: int) -> str:
+    if total <= 1:
         return "priority-critical"
-    if "relevante" in text or "potencial" in text:
+    ratio = position / max(total - 1, 1)
+    if ratio <= 0.34:
+        return "priority-critical"
+    if ratio <= 0.67:
         return "priority-attention"
     return "priority-monitoring"
 
@@ -614,8 +619,9 @@ def render_ranking_table(ranking: pd.DataFrame) -> None:
     header = "".join(f"<th>{escape(column)}</th>" for column in available_columns)
     rows = []
     numeric_columns = {"Ranking", "Indice I/P", "Fator evidencia", "Indice ajustado"}
-    for _, row in ranking.iterrows():
-        css_class = priority_css_class(row.get("Resultado", ""))
+    total_rows = len(ranking)
+    for position, (_, row) in enumerate(ranking.iterrows()):
+        css_class = priority_css_class(position, total_rows)
         cells = []
         for column in available_columns:
             value = row.get(column, "")
