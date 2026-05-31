@@ -214,29 +214,94 @@ def render_cover() -> None:
             line-height: 1.45;
             margin: -0.35rem 0 1rem;
         }
-        .reference-table {
+        .priority-infographic {
             width: 100%;
-            border-collapse: collapse;
             border: 1px solid #d1d5db;
             border-radius: 8px;
             overflow: hidden;
-            font-size: .92rem;
+            margin: .6rem 0 1rem;
+            background: #ffffff;
         }
-        .reference-table th,
-        .reference-table td {
-            border-bottom: 1px solid #e5e7eb;
-            padding: 10px 11px;
-            text-align: center;
-            vertical-align: top;
-        }
-        .reference-table th {
+        .priority-infographic-header {
             background: #f8fafc;
-            color: #475569;
-            font-weight: 600;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 12px 14px;
+            text-align: center;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .priority-formula {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+            gap: 8px;
+            align-items: center;
+            padding: 14px;
+        }
+        .formula-box {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 12px 10px;
+            text-align: center;
+            min-height: 72px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .formula-box strong {
+            display: block;
+            font-size: .92rem;
+            color: #111827;
+        }
+        .formula-box span {
+            display: block;
+            font-size: .76rem;
+            color: #6b7280;
+            margin-top: 3px;
+        }
+        .formula-operator {
+            color: #64748b;
+            font-weight: 800;
+            font-size: 1.15rem;
             text-align: center;
         }
-        .reference-table tr:last-child td {
-            border-bottom: none;
+        .priority-lanes {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            border-top: 1px solid #e5e7eb;
+        }
+        .priority-lane {
+            padding: 13px 14px;
+            text-align: center;
+            min-height: 96px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 1px solid rgba(17,24,39,.16);
+        }
+        .priority-lane:last-child {
+            border-right: none;
+        }
+        .priority-lane strong {
+            display: block;
+            font-size: .92rem;
+            margin-bottom: 4px;
+        }
+        .priority-lane span {
+            display: block;
+            font-size: .78rem;
+            line-height: 1.25;
+        }
+        .lane-critical {
+            background: #dc2626;
+            color: #ffffff;
+        }
+        .lane-attention {
+            background: #fb923c;
+            color: #111827;
+        }
+        .lane-monitoring {
+            background: #fde047;
+            color: #111827;
         }
         .priority-critical td {
             background: #dc2626;
@@ -253,30 +318,23 @@ def render_cover() -> None:
         .priority-result {
             font-weight: 700;
         }
-        .type-stack {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 2px;
-        }
-        .type-pill {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: 1.5px solid currentColor;
-            border-radius: 999px;
-            padding: 3px 9px;
-            font-size: .76rem;
-            font-weight: 800;
-            line-height: 1.1;
-            letter-spacing: 0;
-            text-transform: uppercase;
-        }
-        .type-detail {
-            font-size: .72rem;
-            font-weight: 700;
-            line-height: 1.15;
+        @media (max-width: 760px) {
+            .priority-formula {
+                grid-template-columns: 1fr;
+            }
+            .formula-operator {
+                display: none;
+            }
+            .priority-lanes {
+                grid-template-columns: 1fr;
+            }
+            .priority-lane {
+                border-right: none;
+                border-bottom: 1px solid rgba(17,24,39,.16);
+            }
+            .priority-lane:last-child {
+                border-bottom: none;
+            }
         }
         .ranking-table {
             width: 100%;
@@ -571,62 +629,51 @@ def render_matrix_table(title: str, matrix: dict[str, dict[str, str]], impact_or
 
 def matrix_reference() -> None:
     st.subheader("4. Tabela de interpretacao da prioridade")
-    st.caption("Referencia para leitura gerencial do ranking. A coluna Tipo diferencia ameacas, oportunidades e regras comuns.")
-    rows = [
-        ("priority-critical", "Ameaca", "Alto", "Alta", "Risco critico", "Mitigar imediatamente"),
-        ("priority-attention", "Ameaca", "Alto", "Baixa", "Risco relevante", "Monitorar e preparar contingencia"),
-        ("priority-critical", "Oportunidade", "Alto", "Alta", "Oportunidade prioritaria", "Explorar rapidamente"),
-        (
-            "priority-attention",
-            "Oportunidade",
-            "Alto",
-            "Baixa",
-            "Oportunidade potencial",
-            "Monitorar e desenvolver condicoes",
-        ),
-        ("priority-monitoring", "Ambos", "Baixo", "Baixa", "Monitoramento", "Acompanhar em ciclo periodico"),
-    ]
-
-    def type_cell(kind: str) -> str:
-        if kind == "Ameaca":
-            detail = "mitigacao"
-        elif kind == "Oportunidade":
-            detail = "captura de valor"
-        else:
-            detail = "regra comum"
-        return (
-            '<span class="type-stack">'
-            f'<span class="type-pill">{kind}</span>'
-            f'<span class="type-detail">{detail}</span>'
-            "</span>"
-        )
-
-    body = "".join(
-        f"""
-        <tr class="{css_class}">
-            <td>{type_cell(kind)}</td>
-            <td>{impact}</td>
-            <td>{probability}</td>
-            <td class="priority-result">{result}</td>
-            <td>{recommendation}</td>
-        </tr>
-        """
-        for css_class, kind, impact, probability, result, recommendation in rows
+    st.caption(
+        "Referencia para leitura gerencial do ranking. O calculo continua sendo fuzzy; "
+        "a leitura diferencia ameacas e oportunidades."
     )
     st.markdown(
-        f"""
-        <table class="reference-table">
-            <thead>
-                <tr>
-                    <th>Tipo</th>
-                    <th>Impacto</th>
-                    <th>Probabilidade</th>
-                    <th>Resultado</th>
-                    <th>Acao recomendada</th>
-                </tr>
-            </thead>
-            <tbody>{body}</tbody>
-        </table>
+        """
+        <div class="priority-infographic">
+            <div class="priority-infographic-header">Como a prioridade e formada</div>
+            <div class="priority-formula">
+                <div class="formula-box">
+                    <strong>Impacto</strong>
+                    <span>grau fuzzy de 0 a 1</span>
+                </div>
+                <div class="formula-operator">x</div>
+                <div class="formula-box">
+                    <strong>Probabilidade</strong>
+                    <span>chance de ocorrencia</span>
+                </div>
+                <div class="formula-operator">x</div>
+                <div class="formula-box">
+                    <strong>Fator de evidencia</strong>
+                    <span>dado real ou estimativa</span>
+                </div>
+                <div class="formula-operator">=</div>
+                <div class="formula-box">
+                    <strong>Indice ajustado</strong>
+                    <span>ordena o ranking</span>
+                </div>
+            </div>
+            <div class="priority-lanes">
+                <div class="priority-lane lane-critical">
+                    <strong>Prioridade alta</strong>
+                    <span>Ameaca: mitigar</span>
+                    <span>Oportunidade: explorar</span>
+                </div>
+                <div class="priority-lane lane-attention">
+                    <strong>Atencao gerencial</strong>
+                    <span>Monitorar, preparar resposta ou desenvolver condicoes</span>
+                </div>
+                <div class="priority-lane lane-monitoring">
+                    <strong>Monitoramento</strong>
+                    <span>Acompanhar em ciclo periodico</span>
+                </div>
+            </div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
