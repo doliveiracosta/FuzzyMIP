@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import mimetypes
+from html import escape
 from pathlib import Path
 
 import pandas as pd
@@ -212,6 +213,69 @@ def render_cover() -> None:
             font-size: 1.02rem;
             line-height: 1.45;
             margin: -0.35rem 0 1rem;
+        }
+        .reference-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: .92rem;
+        }
+        .reference-table th,
+        .reference-table td {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 10px 11px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .reference-table th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+        }
+        .reference-table tr:last-child td {
+            border-bottom: none;
+        }
+        .priority-critical td {
+            background: #fee2e2;
+        }
+        .priority-attention td {
+            background: #ffedd5;
+        }
+        .priority-monitoring td {
+            background: #fef9c3;
+        }
+        .priority-result {
+            font-weight: 700;
+        }
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: .88rem;
+            margin-top: .4rem;
+        }
+        .ranking-table th,
+        .ranking-table td {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 9px 9px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .ranking-table th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+        }
+        .ranking-table tr:last-child td {
+            border-bottom: none;
+        }
+        .ranking-table td.numeric {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
         }
         </style>
         """,
@@ -478,39 +542,95 @@ def render_matrix_table(title: str, matrix: dict[str, dict[str, str]], impact_or
 def matrix_reference() -> None:
     st.subheader("4. Tabela de interpretacao da prioridade")
     st.caption("Referencia para leitura gerencial do ranking. O calculo continua sendo fuzzy; a tabela resume a interpretacao esperada.")
-    reference = pd.DataFrame(
-        [
-            {
-                "Tipo": "Ameaca",
-                "Impacto": "Alto",
-                "Probabilidade": "Alta",
-                "Resultado": "Risco critico",
-                "Acao recomendada": "Mitigar imediatamente",
-            },
-            {
-                "Tipo": "Ameaca",
-                "Impacto": "Alto",
-                "Probabilidade": "Baixa",
-                "Resultado": "Risco relevante",
-                "Acao recomendada": "Monitorar e preparar contingencia",
-            },
-            {
-                "Tipo": "Oportunidade",
-                "Impacto": "Alto",
-                "Probabilidade": "Alta",
-                "Resultado": "Oportunidade prioritaria",
-                "Acao recomendada": "Explorar rapidamente",
-            },
-            {
-                "Tipo": "Oportunidade",
-                "Impacto": "Alto",
-                "Probabilidade": "Baixa",
-                "Resultado": "Oportunidade potencial",
-                "Acao recomendada": "Monitorar e desenvolver condicoes",
-            },
-        ]
+    rows = [
+        ("priority-critical", "Ameaca", "Alto", "Alta", "Risco critico", "Mitigar imediatamente"),
+        ("priority-attention", "Ameaca", "Alto", "Baixa", "Risco relevante", "Monitorar e preparar contingencia"),
+        ("priority-critical", "Oportunidade", "Alto", "Alta", "Oportunidade prioritaria", "Explorar rapidamente"),
+        (
+            "priority-attention",
+            "Oportunidade",
+            "Alto",
+            "Baixa",
+            "Oportunidade potencial",
+            "Monitorar e desenvolver condicoes",
+        ),
+        ("priority-monitoring", "Ambos", "Baixo", "Baixa", "Monitoramento", "Acompanhar em ciclo periodico"),
+    ]
+    body = "".join(
+        f"""
+        <tr class="{css_class}">
+            <td>{kind}</td>
+            <td>{impact}</td>
+            <td>{probability}</td>
+            <td class="priority-result">{result}</td>
+            <td>{recommendation}</td>
+        </tr>
+        """
+        for css_class, kind, impact, probability, result, recommendation in rows
     )
-    st.dataframe(reference, use_container_width=True, hide_index=True)
+    st.markdown(
+        f"""
+        <table class="reference-table">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Impacto</th>
+                    <th>Probabilidade</th>
+                    <th>Resultado</th>
+                    <th>Acao recomendada</th>
+                </tr>
+            </thead>
+            <tbody>{body}</tbody>
+        </table>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def priority_css_class(result: object) -> str:
+    text = str(result).lower()
+    if "critico" in text or "prioritaria" in text:
+        return "priority-critical"
+    if "relevante" in text or "potencial" in text:
+        return "priority-attention"
+    return "priority-monitoring"
+
+
+def render_ranking_table(ranking: pd.DataFrame) -> None:
+    columns = [
+        "Ranking",
+        "Acao",
+        "Natureza",
+        "Impacto",
+        "Probabilidade",
+        "Indice I/P",
+        "Base da informacao",
+        "Fator evidencia",
+        "Indice ajustado",
+        "Resultado",
+        "Acao recomendada",
+    ]
+    available_columns = [column for column in columns if column in ranking.columns]
+    header = "".join(f"<th>{escape(column)}</th>" for column in available_columns)
+    rows = []
+    numeric_columns = {"Ranking", "Indice I/P", "Fator evidencia", "Indice ajustado"}
+    for _, row in ranking.iterrows():
+        css_class = priority_css_class(row.get("Resultado", ""))
+        cells = []
+        for column in available_columns:
+            value = row.get(column, "")
+            cell_class = "numeric" if column in numeric_columns else ""
+            cells.append(f'<td class="{cell_class}">{escape(str(value))}</td>')
+        rows.append(f'<tr class="{css_class}">{"".join(cells)}</tr>')
+    st.markdown(
+        f"""
+        <table class="ranking-table">
+            <thead><tr>{header}</tr></thead>
+            <tbody>{''.join(rows)}</tbody>
+        </table>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def ranking_outputs() -> None:
@@ -535,21 +655,7 @@ def ranking_outputs() -> None:
         unsafe_allow_html=True,
     )
 
-    columns = [
-        "Ranking",
-        "Acao",
-        "Natureza",
-        "Impacto",
-        "Probabilidade",
-        "Indice I/P",
-        "Base da informacao",
-        "Fator evidencia",
-        "Indice ajustado",
-        "Resultado",
-        "Acao recomendada",
-    ]
-    display = ranking[[column for column in columns if column in ranking.columns]]
-    st.dataframe(display, use_container_width=True, hide_index=True)
+    render_ranking_table(ranking)
     st.info(consultive_conclusion(ranking))
 
 
