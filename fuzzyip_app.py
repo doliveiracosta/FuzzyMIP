@@ -613,6 +613,9 @@ def priority_row_style(position: int, total: int) -> tuple[str, str]:
 
 
 def render_ranking_table(ranking: pd.DataFrame) -> None:
+    display_labels = {
+        "Indice I/P": "Indice",
+    }
     columns = [
         "Ranking",
         "Acao",
@@ -627,7 +630,7 @@ def render_ranking_table(ranking: pd.DataFrame) -> None:
         "Acao recomendada",
     ]
     available_columns = [column for column in columns if column in ranking.columns]
-    header = "".join(f"<th>{escape(column)}</th>" for column in available_columns)
+    header = "".join(f"<th>{escape(display_labels.get(column, column))}</th>" for column in available_columns)
     rows = []
     numeric_columns = {"Ranking", "Indice I/P", "Fator evidencia", "Indice ajustado"}
     total_rows = len(ranking)
