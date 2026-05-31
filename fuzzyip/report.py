@@ -10,7 +10,7 @@ from xml.sax.saxutils import escape
 import pandas as pd
 
 from .constants import APP_NAME, APP_OWNER_LABEL
-from .core import consultive_conclusion, format_fuzzy_value, statistical_summary
+from .core import consultive_conclusion, format_fuzzy_value
 
 
 def write_pdf_report(
@@ -33,25 +33,36 @@ def write_pdf_report(
     def paragraph(text: object, style: str = "Normal") -> Paragraph:
         return Paragraph(escape(str(text)), styles[style])
 
-    def table(rows: list[list[object]], widths: list[float]) -> Table:
+    def priority_color(result: object):
+        text = str(result).lower()
+        if "critico" in text or "prioritaria" in text:
+            return colors.HexColor("#fee2e2")
+        if "relevante" in text or "potencial" in text:
+            return colors.HexColor("#ffedd5")
+        if "monitor" in text:
+            return colors.HexColor("#fef9c3")
+        return None
+
+    def table(rows: list[list[object]], widths: list[float], row_backgrounds: list[object | None] | None = None) -> Table:
         wrapped = [[paragraph(value) for value in row] for row in rows]
         t = Table(wrapped, colWidths=widths, repeatRows=1)
-        t.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#dbeafe")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#111827")),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#9ca3af")),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 8),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 5),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-                    ("TOPPADDING", (0, 0), (-1, -1), 5),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                ]
-            )
-        )
+        commands = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#dbeafe")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#111827")),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#9ca3af")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]
+        if row_backgrounds:
+            for row_index, background in enumerate(row_backgrounds, start=1):
+                if background is not None:
+                    commands.append(("BACKGROUND", (0, row_index), (-1, row_index), background))
+        t.setStyle(TableStyle(commands))
         return t
 
     story.append(paragraph(APP_NAME, "Title"))
@@ -69,43 +80,46 @@ def write_pdf_report(
 
     story.append(paragraph("2. Acoes avaliadas", "Heading1"))
     action_rows = [["Acao", "Natureza", "Impacto", "Probabilidade", "Base da informacao"]]
+    result_by_action = {
+        str(row.get("Acao", "")): row.get("Resultado", "")
+        for _, row in ranking.iterrows()
+    }
+    action_backgrounds = []
     for _, row in actions.iterrows():
+        action_name = row.get("Acao", "")
         action_rows.append(
             [
-                row.get("Acao", ""),
+                action_name,
                 row.get("Natureza", ""),
                 format_fuzzy_value(row.get("Impacto", "")),
                 format_fuzzy_value(row.get("Probabilidade", "")),
                 row.get("Base da informacao", ""),
             ]
         )
-    story.append(table(action_rows, [4.2 * cm, 2.3 * cm, 2.8 * cm, 2.8 * cm, 3.6 * cm]))
+        action_backgrounds.append(priority_color(result_by_action.get(str(action_name), "")))
+    story.append(table(action_rows, [4.2 * cm, 2.3 * cm, 2.8 * cm, 2.8 * cm, 3.6 * cm], action_backgrounds))
     story.append(Spacer(1, 10))
 
     story.append(paragraph("3. Ranking fuzzy Impacto/Probabilidade", "Heading1"))
     rank_rows = [["Rank", "Acao", "Natureza", "Resultado", "Indice ajustado", "Acao recomendada"]]
+    ranking_backgrounds = []
     for _, row in ranking.iterrows():
+        result = row.get("Resultado", "")
         rank_rows.append(
             [
                 row.get("Ranking", ""),
                 row.get("Acao", ""),
                 row.get("Natureza", ""),
-                row.get("Resultado", ""),
+                result,
                 f"{float(row.get('Indice ajustado', row.get('Indice I/P', 0.0))):.4f}",
                 row.get("Acao recomendada", ""),
             ]
         )
-    story.append(table(rank_rows, [1.2 * cm, 3.3 * cm, 2.5 * cm, 2.1 * cm, 2.0 * cm, 4.6 * cm]))
+        ranking_backgrounds.append(priority_color(result))
+    story.append(table(rank_rows, [1.2 * cm, 3.3 * cm, 2.5 * cm, 2.1 * cm, 2.0 * cm, 4.6 * cm], ranking_backgrounds))
     story.append(Spacer(1, 10))
 
-    story.append(paragraph("4. Estatistica descritiva da priorizacao", "Heading1"))
-    stats_rows = [["Indicador", "Valor", "Leitura"]]
-    for _, row in statistical_summary(ranking).iterrows():
-        stats_rows.append([row.get("Indicador", ""), row.get("Valor", ""), row.get("Leitura", "")])
-    story.append(table(stats_rows, [4.2 * cm, 2.8 * cm, 8.7 * cm]))
-    story.append(Spacer(1, 10))
-
-    story.append(paragraph("5. Conclusao consultiva", "Heading1"))
+    story.append(paragraph("Conclusao consultiva", "Heading1"))
     story.append(paragraph(consultive_conclusion(ranking)))
 
     doc.build(story)
