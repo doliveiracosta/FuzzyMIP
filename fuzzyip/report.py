@@ -36,7 +36,15 @@ def write_pdf_report(
             value = f'<font color="{text_color}">{value}</font>'
         return Paragraph(value, styles[style])
 
-    def priority_style(position: int, total: int):
+    def priority_style(position: int, total: int, result: object | None = None):
+        result_text = str(result or "").lower()
+        if "relevante" in result_text or "potencial" in result_text:
+            return colors.HexColor("#fb923c"), "#111827"
+        if "monitor" in result_text:
+            return colors.HexColor("#fde047"), "#111827"
+        if "critico" in result_text or "prioritaria" in result_text:
+            return colors.HexColor("#dc2626"), "#ffffff"
+
         if total <= 1:
             return colors.HexColor("#dc2626"), "#ffffff"
         ratio = position / max(total - 1, 1)
@@ -96,7 +104,7 @@ def write_pdf_report(
     story.append(paragraph("2. Acoes avaliadas", "Heading1"))
     action_rows = [["Acao", "Natureza", "Impacto", "Probabilidade", "Base da informacao"]]
     style_by_action = {
-        str(row.get("Acao", "")): priority_style(position, len(ranking))
+        str(row.get("Acao", "")): priority_style(position, len(ranking), row.get("Resultado", ""))
         for position, (_, row) in enumerate(ranking.iterrows())
     }
     default_style = {
@@ -134,7 +142,7 @@ def write_pdf_report(
                 row.get("Acao recomendada", ""),
             ]
         )
-        ranking_styles.append(priority_style(position, len(ranking)))
+        ranking_styles.append(priority_style(position, len(ranking), result))
     story.append(table(rank_rows, [1.2 * cm, 3.3 * cm, 2.5 * cm, 2.1 * cm, 2.0 * cm, 4.6 * cm], ranking_styles))
     story.append(Spacer(1, 10))
 
