@@ -121,16 +121,16 @@ def decision_result(nature: str, classification: str) -> str:
 def recommended_action(nature: str, classification: str) -> str:
     if is_threat(nature):
         if classification == "Alta":
-            return "Mitigar imediatamente."
+            return "Mitigar imediatamente"
         if classification == "Media":
-            return "Monitorar e preparar contingencia."
-        return "Acompanhar em ciclo periodico."
+            return "Monitorar e preparar contingencia"
+        return "Acompanhar em ciclo periodico"
 
     if classification == "Alta":
-        return "Explorar rapidamente."
+        return "Explorar rapidamente"
     if classification == "Media":
-        return "Monitorar e desenvolver condicoes."
-    return "Acompanhar como oportunidade de baixa urgencia."
+        return "Monitorar e desenvolver condicoes"
+    return "Acompanhar como oportunidade de baixa urgencia"
 
 
 def decision_reading(nature: str, classification: str) -> str:
